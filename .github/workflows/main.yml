@@ -9,7 +9,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Use a standard Linux virtual machine
+    runs-on: ubuntu-latest
+    permissions:
+  contents: write # Use a standard Linux virtual machine
 
     steps:
       - name: Check out repo
