@@ -1,4 +1,4 @@
-### Hi there 👋 Here are my stats!
+### Hi there 👋
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="dark_mode.svg">
