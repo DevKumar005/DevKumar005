@@ -11,7 +11,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-  contents: write # Use a standard Linux virtual machine
+      contents: write # Use a standard Linux virtual machine
 
     steps:
       - name: Check out repo
