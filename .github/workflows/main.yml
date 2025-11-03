@@ -34,7 +34,7 @@ jobs:
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           USER_NAME: ${{ github.repository_owner }} # This automatically gets your username
         run: |
-          python update_stats.py
+          python main.py
           
       - name: Commit and push changes
         # This step checks if the script made any changes to the SVG files.
