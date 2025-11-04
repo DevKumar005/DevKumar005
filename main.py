@@ -190,52 +190,51 @@ def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, additio
     else: return recursive_loc(owner, repo_name, data, cache_comment, addition_total, deletion_total, my_commits, history['pageInfo']['endCursor'])
 
 
-def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None, edges=[]):
+def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None, edges=None):
     """
-    Uses GitHub's GraphQL v4 API to query all the repositories I have access to.
-    Safer: handles API error/empty response gracefully.
+    Uses GitHub's GraphQL v4 API to query all the repositories I have access to (with respect to owner_affiliation)
+    Queries 60 repos at a time, because larger queries give a 502 timeout error and smaller queries send too many
+    requests and also give a 502 error.
+    Returns the total number of lines of code in all repositories
     """
+    if edges is None:
+        edges = []
+
     query_count('loc_query')
     query = '''
     query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
         user(login: $login) {
             repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
-                edges {
-                    node {
-                        ... on Repository {
-                            nameWithOwner
-                            defaultBranchRef {
-                                target {
-                                    ... on Commit {
-                                        history {
-                                            totalCount
+            edges {
+                node {
+                    ... on Repository {
+                        nameWithOwner
+                        defaultBranchRef {
+                            target {
+                                ... on Commit {
+                                    history {
+                                        totalCount
                                         }
                                     }
                                 }
                             }
                         }
                     }
+                pageInfo {
+                    endCursor
+                    hasNextPage
                 }
-                pageInfo { endCursor hasNextPage }
             }
         }
     }'''
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
 
-    # Graceful fail if API limit / bad token / network hiccup
-    try:
-        page = request.json()
-        user = page.get('data', {}).get('user')
-        if not user:
-            raise Exception(f"GitHub API returned no user data — likely rate limit or token issue: {page}")
-        repos = user['repositories']
-    except Exception as e:
-        print("⚠️ GitHub LOC query failed, returning cached data only:", e)
-        return [0,0,0, True]
+    payload = request.json()
+    repos = payload['data']['user']['repositories']
 
-    if repos['pageInfo']['hasNextPage']:
-        edges += repos['edges']
+    if repos['pageInfo']['hasNextPage']:   # If repository data has another page
+        edges += repos['edges']            # Add on to the LoC count
         return loc_query(owner_affiliation, comment_size, force_cache, repos['pageInfo']['endCursor'], edges)
     else:
         return cache_builder(edges + repos['edges'], comment_size, force_cache)(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
