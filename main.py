@@ -393,11 +393,6 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     root = tree.getroot()
     # write uptime/age into SVG; many templates use either 'age_data' or 'age' as the id — we update both to be safe
     # format uptime/age similar to commit lines for dot justification
-    def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, loc_data):
-    tree = etree.parse(filename)
-    root = tree.getroot()
-    # write uptime/age into SVG; many templates use either 'age_data' or 'age' as the id — we update both to be safe
-    # format uptime/age similar to commit lines for dot justification
     justify_format(root, 'age_data', age_data) # length=0 tells the new function to just update the value
     find_and_replace(root, 'age', age_data)
     justify_format(root, 'commit_data', commit_data)
@@ -412,6 +407,10 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
 
 
 def justify_format(root, element_id, new_text, length=0):
+    """
+    Updates and formats the text of the element.
+    (The dot-justification code has been removed to allow manual alignment)
+    """
     if isinstance(new_text, int):
         new_text = f"{'{:,}'.format(new_text)}"
     new_text = str(new_text)
@@ -541,6 +540,7 @@ if __name__ == '__main__':
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
     for funct_name, count in QUERY_COUNT.items(): print('{:<28}'.format('   ' + funct_name + ':'), '{:>6}'.format(count))
+
 
 
 
