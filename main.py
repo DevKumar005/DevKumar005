@@ -364,7 +364,8 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     tree = etree.parse(filename)
     root = tree.getroot()
     # write uptime/age into SVG; many templates use either 'age_data' or 'age' as the id — we update both to be safe
-    justify_format(root, 'age_data', age_data)
+    # format uptime/age similar to commit lines for dot justification
+    justify_format(root, 'age_data', age_data, 22)
     find_and_replace(root, 'age', age_data)
     justify_format(root, 'commit_data', commit_data, 22)
     justify_format(root, 'star_data', star_data, 14)
