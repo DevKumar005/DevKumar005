@@ -42,12 +42,31 @@ def format_plural(unit):
 
 def simple_request(func_name, query, variables):
     """
-    Returns a request, or raises an Exception if the response does not succeed.
+    Returns a requests.Response if successful, otherwise raises an Exception with a helpful message.
+    Also detects GraphQL errors present in the JSON payload.
     """
     request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables':variables}, headers=HEADERS)
-    if request.status_code == 200:
-        return request
-    raise Exception(func_name, ' has failed with a', request.status_code, request.text, QUERY_COUNT)
+    # Try to parse JSON so we can provide a clearer error when GitHub returns an 'errors' field
+    try:
+        payload = request.json()
+    except ValueError:
+        # Not JSON — something unexpected returned from GitHub
+        raise Exception(func_name, 'returned non-JSON response', request.status_code, request.text, QUERY_COUNT)
+
+    if request.status_code != 200:
+        # include the parsed payload where possible
+        raise Exception(func_name, ' has failed with a', request.status_code, payload, QUERY_COUNT)
+
+    # GraphQL may return a 200 with an 'errors' key — treat that as a failure
+    if isinstance(payload, dict) and 'errors' in payload:
+        raise Exception(func_name, 'GraphQL returned errors:', payload['errors'], QUERY_COUNT)
+
+    # Finally ensure 'data' is present
+    if isinstance(payload, dict) and 'data' not in payload:
+        raise Exception(func_name, 'GraphQL response missing "data" key', payload, QUERY_COUNT)
+
+    # All good
+    return request
 
 
 def graph_commits(start_date, end_date):
@@ -173,45 +192,53 @@ def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, additio
 
 def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None, edges=[]):
     """
-    Uses GitHub's GraphQL v4 API to query all the repositories I have access to (with respect to owner_affiliation)
-    Queries 60 repos at a time, because larger queries give a 502 timeout error and smaller queries send too many
-    requests and also give a 502 error.
-    Returns the total number of lines of code in all repositories
+    Uses GitHub's GraphQL v4 API to query all the repositories I have access to.
+    Safer: handles API error/empty response gracefully.
     """
     query_count('loc_query')
     query = '''
     query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
         user(login: $login) {
             repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
-            edges {
-                node {
-                    ... on Repository {
-                        nameWithOwner
-                        defaultBranchRef {
-                            target {
-                                ... on Commit {
-                                    history {
-                                        totalCount
+                edges {
+                    node {
+                        ... on Repository {
+                            nameWithOwner
+                            defaultBranchRef {
+                                target {
+                                    ... on Commit {
+                                        history {
+                                            totalCount
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                pageInfo {
-                    endCursor
-                    hasNextPage
                 }
+                pageInfo { endCursor hasNextPage }
             }
         }
     }'''
     variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
-    if request.json()['data']['user']['repositories']['pageInfo']['hasNextPage']:   # If repository data has another page
-        edges += request.json()['data']['user']['repositories']['edges']            # Add on to the LoC count
-        return loc_query(owner_affiliation, comment_size, force_cache, request.json()['data']['user']['repositories']['pageInfo']['endCursor'], edges)
+
+    # Graceful fail if API limit / bad token / network hiccup
+    try:
+        page = request.json()
+        user = page.get('data', {}).get('user')
+        if not user:
+            raise Exception(f"GitHub API returned no user data — likely rate limit or token issue: {page}")
+        repos = user['repositories']
+    except Exception as e:
+        print("⚠️ GitHub LOC query failed, returning cached data only:", e)
+        return [0,0,0, True]
+
+    if repos['pageInfo']['hasNextPage']:
+        edges += repos['edges']
+        return loc_query(owner_affiliation, comment_size, force_cache, repos['pageInfo']['endCursor'], edges)
     else:
-        return cache_builder(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
+        return cache_builder(edges + repos['edges'], comment_size, force_cache)(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
 
 
 def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
