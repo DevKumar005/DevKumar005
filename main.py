@@ -200,34 +200,49 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
     if edges is None:
         edges = []
 
+    # Allow quick runs in CI by skipping heavy LOC calculations
+    if os.environ.get('SKIP_LOC') == '1':
+        print('SKIP_LOC=1 detected — skipping LOC calculation (returns zeros).')
+        return [0, 0, 0, True]
+
     query_count('loc_query')
-    query = '''
-    query ($owner_affiliation: [RepositoryAffiliation], $login: String!, $cursor: String) {
-        user(login: $login) {
-            repositories(first: 60, after: $cursor, ownerAffiliations: $owner_affiliation) {
-            edges {
-                node {
-                    ... on Repository {
-                        nameWithOwner
-                        defaultBranchRef {
-                            target {
-                                ... on Commit {
-                                    history {
-                                        totalCount
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                pageInfo {
+
+    # owner_affiliation may be a list like ['OWNER','COLLABORATOR'] — GraphQL enums must be unquoted in the query
+    if isinstance(owner_affiliation, (list, tuple)):
+        aff_list = ', '.join(owner_affiliation)
+    else:
+        aff_list = str(owner_affiliation)
+    affiliation_enum = '[' + aff_list + ']'
+
+    query = f'''
+    query ($login: String!, $cursor: String) {{
+        user(login: $login) {{
+            repositories(first: 60, after: $cursor, ownerAffiliations: {affiliation_enum}) {{
+                edges {{
+                    node {{
+                        ... on Repository {{
+                            nameWithOwner
+                            defaultBranchRef {{
+                                target {{
+                                    ... on Commit {{
+                                        history {{
+                                            totalCount
+                                        }}
+                                    }}
+                                }}
+                            }}
+                        }}
+                    }}
+                }}
+                pageInfo {{
                     endCursor
                     hasNextPage
-                }
-            }
-        }
-    }'''
-    variables = {'owner_affiliation': owner_affiliation, 'login': USER_NAME, 'cursor': cursor}
+                }}
+            }}
+        }}
+    }}'''
+
+    variables = {'login': USER_NAME, 'cursor': cursor}
     request = simple_request(loc_query.__name__, query, variables)
 
     payload = request.json()
@@ -237,7 +252,7 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
         edges += repos['edges']            # Add on to the LoC count
         return loc_query(owner_affiliation, comment_size, force_cache, repos['pageInfo']['endCursor'], edges)
     else:
-        return cache_builder(edges + repos['edges'], comment_size, force_cache)(edges + request.json()['data']['user']['repositories']['edges'], comment_size, force_cache)
+        return cache_builder(edges + repos['edges'], comment_size, force_cache)
 
 
 def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
