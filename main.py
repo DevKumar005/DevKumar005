@@ -202,8 +202,29 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
 
     # Allow quick runs in CI by skipping heavy LOC calculations
     if os.environ.get('SKIP_LOC') == '1':
-        print('SKIP_LOC=1 detected — skipping LOC calculation (returns zeros).')
-        return [0, 0, 0, True]
+        # If we have a cache file from a previous full run, prefer to read it and return cached LOC values so the README shows correct numbers.
+        filename = 'cache/' + hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest() + '.txt'
+        if os.path.exists(filename):
+            try:
+                with open(filename, 'r') as f:
+                    data = f.readlines()
+                # strip comment block if present
+                cache_comment = data[:comment_size]
+                data = data[comment_size:]
+                loc_add = 0
+                loc_del = 0
+                for line in data:
+                    parts = line.split()
+                    if len(parts) >= 5:
+                        loc_add += int(parts[3])
+                        loc_del += int(parts[4])
+                return [loc_add, loc_del, loc_add - loc_del, True]
+            except Exception:
+                print('SKIP_LOC=1 detected and cache file could not be read — returning zeros for LOC.')
+                return [0, 0, 0, True]
+        else:
+            print('SKIP_LOC=1 detected — cache missing, returning zeros for LOC.')
+            return [0, 0, 0, True]
 
     query_count('loc_query')
 
@@ -306,14 +327,21 @@ def flush_cache(edges, filename, comment_size):
     Wipes the cache file
     This is called when the number of repositories changes or when the file is first created
     """
-    with open(filename, 'r') as f:
-        data = []
-        if comment_size > 0:
-            data = f.readlines()[:comment_size] # only save the comment
+    # ensure cache directory exists
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
+
+    data = []
+    if comment_size > 0 and os.path.exists(filename):
+        try:
+            with open(filename, 'r') as f:
+                data = f.readlines()[:comment_size] # only save the comment
+        except Exception:
+            data = []
     with open(filename, 'w') as f:
         f.writelines(data)
         for node in edges:
-            f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0\n')
+            f.write(hashlib.sha256(node['node']['nameWithOwner'].encode('utf-8')).hexdigest() + ' 0 0 0 0
+')
 
 
 def add_archive():
@@ -407,15 +435,24 @@ def find_and_replace(root, element_id, new_text):
 def commit_counter(comment_size):
     """
     Counts up my total commits, using the cache file created by cache_builder.
+    Safely returns 0 if the cache file doesn't exist.
     """
     total_commits = 0
     filename = 'cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt' # Use the same filename as cache_builder
-    with open(filename, 'r') as f:
-        data = f.readlines()
+    try:
+        with open(filename, 'r') as f:
+            data = f.readlines()
+    except FileNotFoundError:
+        # No cache yet — return 0 commits rather than raising
+        return 0
     cache_comment = data[:comment_size] # save the comment block
     data = data[comment_size:] # remove those lines
     for line in data:
-        total_commits += int(line.split()[2])
+        try:
+            total_commits += int(line.split()[2])
+        except Exception:
+            # ignore malformed lines
+            continue
     return total_commits
 
 
