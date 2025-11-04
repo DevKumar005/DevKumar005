@@ -12,7 +12,7 @@ import hashlib
 # Issues and pull requests permissions not needed at the moment, but may be used in the future
 HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
 USER_NAME = os.environ['USER_NAME']
-QUERY_COUNT = {'user_getter': 0, 'follower_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
+QUERY_COUNT = {'user_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
 
 
 def daily_readme(birthday):
@@ -198,7 +198,6 @@ def loc_query(owner_affiliation, comment_size=0, force_cache=False, cursor=None,
                             }
                         }
                     }
-                }
                 pageInfo {
                     endCursor
                     hasNextPage
@@ -295,10 +294,11 @@ def add_archive():
     added_commits += int(old_data[-1].split()[4][:-1])
     return [added_loc, deleted_loc, added_loc - deleted_loc, added_commits, contributed_repos]
 
+
 def force_close_file(data, cache_comment):
     """
     Forces the file to close, preserving whatever data was written to it
-    This is needed because if this function is called, the program would've crashed before the file is properly saved and closed
+    This is needed because if this function is called, the program would've crashed before the file was properly saved and closed
     """
     filename = 'cache/'+hashlib.sha256(USER_NAME.encode('utf-8')).hexdigest()+'.txt'
     with open(filename, 'w') as f:
@@ -316,17 +316,20 @@ def stars_counter(data):
     return total_stars
 
 
-def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
+def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, loc_data):
     """
     Parse SVG files and update elements with my age, commits, stars, repositories, and lines written
     """
     tree = etree.parse(filename)
     root = tree.getroot()
+    # write uptime/age into SVG; many templates use either 'age_data' or 'age' as the id — we update both to be safe
+    justify_format(root, 'age_data', age_data)
+    find_and_replace(root, 'age', age_data)
     justify_format(root, 'commit_data', commit_data, 22)
     justify_format(root, 'star_data', star_data, 14)
     justify_format(root, 'repo_data', repo_data, 6)
     justify_format(root, 'contrib_data', contrib_data)
-    justify_format(root, 'follower_data', follower_data, 10)
+    # follower_data removed by user preference
     justify_format(root, 'loc_data', loc_data[2], 9)
     justify_format(root, 'loc_add', loc_data[0])
     justify_format(root, 'loc_del', loc_data[1], 7)
@@ -390,22 +393,6 @@ def user_getter(username):
     request = simple_request(user_getter.__name__, query, variables)
     return {'id': request.json()['data']['user']['id']}, request.json()['data']['user']['createdAt']
 
-def follower_getter(username):
-    """
-    Returns the number of followers of the user
-    """
-    query_count('follower_getter')
-    query = '''
-    query($login: String!){
-        user(login: $login) {
-            followers {
-                totalCount
-            }
-        }
-    }'''
-    request = simple_request(follower_getter.__name__, query, {'login': username})
-    return int(request.json()['data']['user']['followers']['totalCount'])
-
 
 def query_count(funct_id):
     """
@@ -433,7 +420,7 @@ def formatter(query_type, difference, funct_return=False, whitespace=0):
     print('{:<23}'.format('   ' + query_type + ':'), sep='', end='')
     print('{:>12}'.format('%.4f' % difference + ' s ')) if difference > 1 else print('{:>12}'.format('%.4f' % (difference * 1000) + ' ms'))
     if whitespace:
-        return f"{'{:,}'.format(funct_return): <{whitespace}}"
+        return f"{"{:,}".format(funct_return): <{whitespace}}"
     return funct_return
 
 
@@ -455,12 +442,12 @@ if __name__ == '__main__':
     star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
-    follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
+    # follower option removed by user preference
 
     for index in range(len(total_loc)-1): total_loc[index] = '{:,}'.format(total_loc[index]) # format added, deleted, and total LOC
 
-    svg_overwrite('dark_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[:-1])
-    svg_overwrite('light_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[:-1])
+    svg_overwrite('dark_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, total_loc[:-1])
+    svg_overwrite('light_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, total_loc[:-1])
 
     # move cursor to override 'Calculation times:' with 'Total function time:' and the total function time, then move cursor back
     print('\033[F\033[F\033[F\033[F\033[F\033[F\033[F\033[F',
