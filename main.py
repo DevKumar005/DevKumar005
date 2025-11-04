@@ -417,10 +417,22 @@ def formatter(query_type, difference, funct_return=False, whitespace=0):
     Prints a formatted time differential
     Returns formatted result if whitespace is specified, otherwise returns raw result
     """
+    # print the left-aligned label
     print('{:<23}'.format('   ' + query_type + ':'), sep='', end='')
-    print('{:>12}'.format('%.4f' % difference + ' s ')) if difference > 1 else print('{:>12}'.format('%.4f' % (difference * 1000) + ' ms'))
+    # print the time (seconds or milliseconds)
+    if difference > 1:
+        print('{:>12}'.format('%.4f' % difference + ' s '))
+    else:
+        print('{:>12}'.format('%.4f' % (difference * 1000) + ' ms'))
+
     if whitespace:
-        return f"{"{:,}".format(funct_return): <{whitespace}}"
+        # format funct_return with thousand separators then left-justify to requested width
+        try:
+            formatted = format(funct_return, ',')
+        except Exception:
+            formatted = str(funct_return)
+        return f"{formatted:<{whitespace}}"
+
     return funct_return
 
 
