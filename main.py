@@ -270,14 +270,10 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
 
 def flush_cache(edges, filename, comment_size):
     os.makedirs(os.path.dirname(filename), exist_ok=True)
-
     data = []
-    if comment_size > 0 and os.path.exists(filename):
-        try:
-            with open(filename, 'r') as f:
-                data = f.readlines()[:comment_size]
-        except Exception:
-            data = []
+    if comment_size > 0:
+        for _ in range(comment_size):
+            data.append('This line is a comment block. Write whatever you want here.\n')
     with open(filename, 'w') as f:
         f.writelines(data)
         for node in edges:
@@ -426,3 +422,4 @@ if __name__ == '__main__':
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
     for funct_name, count in QUERY_COUNT.items(): print('{:<28}'.format('   ' + funct_name + ':'), '{:>6}'.format(count))
+
