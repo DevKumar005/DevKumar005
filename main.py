@@ -10,6 +10,9 @@ HEADERS = {'authorization': 'token '+ os.environ['ACCESS_TOKEN']}
 USER_NAME = os.environ['USER_NAME']
 QUERY_COUNT = {'user_getter': 0, 'graph_repos_stars': 0, 'recursive_loc': 0, 'graph_commits': 0, 'loc_query': 0}
 
+RETRYABLE_STATUS_CODES = (502, 503, 504)
+MAX_RETRIES = 8  # 1+2+4+8+16+30+30+30 = ~121s of total retry window per call
+
 
 def daily_readme(birthday):
     diff = relativedelta.relativedelta(datetime.datetime.today(), birthday)
@@ -24,8 +27,23 @@ def format_plural(unit):
     return 's' if unit != 1 else ''
 
 
+def post_with_retry(query, variables):
+    """POSTs to the GitHub GraphQL API, retrying on transient 502/503/504 errors
+    with exponential backoff. Returns the final response object regardless of
+    whether it ultimately succeeded — callers still check status_code themselves."""
+    request = None
+    for attempt in range(MAX_RETRIES):
+        request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables': variables}, headers=HEADERS)
+        if request.status_code == 200 or request.status_code not in RETRYABLE_STATUS_CODES:
+            break
+        wait = min(2 ** attempt, 30)
+        print(f'Got {request.status_code} from GitHub API, retrying in {wait}s (attempt {attempt + 1}/{MAX_RETRIES})...')
+        time.sleep(wait)
+    return request
+
+
 def simple_request(func_name, query, variables):
-    request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables':variables}, headers=HEADERS)
+    request = post_with_retry(query, variables)
     try:
         payload = request.json()
     except ValueError:
@@ -101,7 +119,7 @@ def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, delet
             defaultBranchRef {
                 target {
                     ... on Commit {
-                        history(first: 100, after: $cursor) {
+                        history(first: 25, after: $cursor) {
                             totalCount
                             edges {
                                 node {
@@ -128,15 +146,29 @@ def recursive_loc(owner, repo_name, data, cache_comment, addition_total=0, delet
         }
     }'''
     variables = {'repo_name': repo_name, 'owner': owner, 'cursor': cursor}
-    request = requests.post('https://api.github.com/graphql', json={'query': query, 'variables':variables}, headers=HEADERS)
+    request = post_with_retry(query, variables)
+
     if request.status_code == 200:
-        if request.json()['data']['repository']['defaultBranchRef'] != None:
-            return loc_counter_one_repo(owner, repo_name, data, cache_comment, request.json()['data']['repository']['defaultBranchRef']['target']['history'], addition_total, deletion_total, my_commits)
-        else: return 0
-    force_close_file(data, cache_comment)
+        payload = request.json()
+        if isinstance(payload, dict) and 'errors' in payload:
+            print(f'Warning: GraphQL errors for {owner}/{repo_name}: {payload["errors"]}. Skipping this repo for this run only — it will retry automatically next run.')
+            return None
+        if payload['data']['repository']['defaultBranchRef'] != None:
+            return loc_counter_one_repo(owner, repo_name, data, cache_comment, payload['data']['repository']['defaultBranchRef']['target']['history'], addition_total, deletion_total, my_commits)
+        else:
+            return 0
+
     if request.status_code == 403:
+        force_close_file(data, cache_comment)
         raise Exception('Too many requests in a short amount of time!\nYou\'ve hit the non-documented anti-abuse limit!')
-    raise Exception('recursive_loc() has failed with a', request.status_code, request.text, QUERY_COUNT)
+
+    # Retries in post_with_retry were exhausted (persistent 502/503/504, or some
+    # other non-200 status). Don't crash the whole script and don't zero out this
+    # repo's data — just leave its cached line untouched. Because the commit-count
+    # comparison in cache_builder will still see a mismatch, this exact repo will
+    # automatically be retried on the next scheduled run.
+    print(f'Warning: recursive_loc() for {owner}/{repo_name} failed with status {request.status_code} after {MAX_RETRIES} retries. Leaving cached value in place; will retry on next run.')
+    return None
 
 
 def loc_counter_one_repo(owner, repo_name, data, cache_comment, history, addition_total, deletion_total, my_commits):
@@ -255,7 +287,12 @@ def cache_builder(edges, comment_size, force_cache, loc_add=0, loc_del=0):
                 if int(commit_count) != edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']:
                     owner, repo_name = edges[index]['node']['nameWithOwner'].split('/')
                     loc = recursive_loc(owner, repo_name, data, cache_comment)
-                    data[index] = repo_hash + ' ' + str(edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']) + ' ' + str(loc[2]) + ' ' + str(loc[0]) + ' ' + str(loc[1]) + '\n'
+                    if loc is not None:
+                        data[index] = repo_hash + ' ' + str(edges[index]['node']['defaultBranchRef']['target']['history']['totalCount']) + ' ' + str(loc[2]) + ' ' + str(loc[0]) + ' ' + str(loc[1]) + '\n'
+                    # else: recursive_loc couldn't get this repo's data even after
+                    # retries. Leave the existing cached line as-is — the commit
+                    # count mismatch will persist, so this repo gets retried
+                    # automatically on the next scheduled run. Nothing is lost.
             except TypeError:
                 data[index] = repo_hash + ' 0 0 0 0\n'
     with open(filename, 'w') as f:
@@ -422,4 +459,3 @@ if __name__ == '__main__':
 
     print('Total GitHub GraphQL API calls:', '{:>3}'.format(sum(QUERY_COUNT.values())))
     for funct_name, count in QUERY_COUNT.items(): print('{:<28}'.format('   ' + funct_name + ':'), '{:>6}'.format(count))
-
