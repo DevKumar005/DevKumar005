@@ -19,7 +19,7 @@ text, tspan {white-space: pre;}
 <text x="40" y="30" fill="#c9d1d9">
 <tspan x="40" y="30">Dev Kumar Sharma</tspan> —————————————————————————————————————————————————————————————————————————————
 <tspan x="40" y="50" class="cc">. </tspan><tspan class="key">OS</tspan>:<tspan class="cc"> ................................................................ </tspan><tspan class="value">Android, MacOS, Windows</tspan>
-<tspan x="40" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ....................................................... </tspan><tspan class="value" id="age_data">21 years, 6 months, 0 days</tspan>
+<tspan x="40" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ....................................................... </tspan><tspan class="value" id="age_data">21 years, 6 months, 1 day</tspan>
 <tspan x="40" y="90" class="cc">. </tspan><tspan class="key">Enrolled</tspan>:<tspan class="cc"> .................................................................... </tspan><tspan class="value">USICT, GGSIPU</tspan>
 <tspan x="40" y="110" class="cc">. </tspan><tspan class="key">Kernel</tspan>:<tspan class="cc"> ........................................................... </tspan><tspan class="value">Computer Science Student</tspan>
 <tspan x="40" y="130" class="cc">. </tspan><tspan class="key">IDE</tspan>:<tspan class="cc"> ................................................................. </tspan><tspan class="value">Visual Studio, VSCode</tspan>
