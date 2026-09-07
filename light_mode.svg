@@ -1,3 +1,4 @@
+```xml
 <?xml version='1.0' encoding='UTF-8'?>
 <svg xmlns="http://www.w3.org/2000/svg" font-family="ConsolasFallback,Consolas,monospace" width="985px" height="530px" font-size="16px">
 <style>
@@ -8,15 +9,15 @@ font-display: swap;
 -webkit-size-adjust: 109%;
 size-adjust: 109%;
 }
-.key {fill: #ffa657;}
-.value {fill: #a5d6ff;}
-.addColor {fill: #3fb950;}
-.delColor {fill: #f85149;}
-.cc {fill: #616e7f;}
+.key {fill: #953800;}
+.value {fill: #0550ae;}
+.addColor {fill: #1a7f37;}
+.delColor {fill: #cf222e;}
+.cc {fill: #57606a;}
 text, tspan {white-space: pre;}
 </style>
-<rect width="985px" height="530px" fill="#161b22" rx="15"/>
-<text x="40" y="30" fill="#c9d1d9">
+<rect width="985px" height="530px" fill="#ffffff" rx="15"/>
+<text x="40" y="30" fill="#24292f">
 <tspan x="40" y="30">Dev Kumar Sharma</tspan> —————————————————————————————————————————————————————————————————————————————
 <tspan x="40" y="50" class="cc">. </tspan><tspan class="key">OS</tspan>:<tspan class="cc"> ................................................................ </tspan><tspan class="value">Android, MacOS, Windows</tspan>
 <tspan x="40" y="70" class="cc">. </tspan><tspan class="key">Uptime</tspan>:<tspan class="cc" id="age_data_dots"> ....................................................... </tspan><tspan class="value" id="age_data">21 years, 6 months, 26 days</tspan>
@@ -42,3 +43,4 @@ text, tspan {white-space: pre;}
 <tspan x="40" y="510" class="cc">. </tspan><tspan class="key">Lines of Code on GitHub</tspan>:<tspan class="cc" id="loc_data_dots"> ......................... </tspan><tspan class="value" id="loc_data">15,781,066</tspan> (<tspan class="addColor" id="loc_add">15,834,499</tspan><tspan class="addColor">++</tspan>, <tspan id="loc_del_dots"> ... </tspan><tspan class="delColor" id="loc_del">53,433</tspan><tspan class="delColor">--</tspan>)
 </text>
 </svg>
+```
