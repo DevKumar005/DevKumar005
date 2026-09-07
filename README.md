@@ -8,6 +8,16 @@
 
 ---
 
+## 🤝 Contributions
+
+Here are some repositories I’ve contributed to:
+
+- [CogniPlant](https://github.com/DEADEND-47/CogniPlant) — Contributed to the backend and AI systems, including RAG, NLP pipelines, knowledge graphs, and compliance workflows.
+
+More contributions will be added as I continue contributing to open-source projects.
+
+---
+
 ## 📜 License & Credits
 
 The code in this repository, including the Python script (`main.py`) and all SVG files, was custom-built. It is public for portfolio purposes only.
