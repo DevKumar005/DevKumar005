@@ -14,6 +14,8 @@ Here are some repositories I’ve contributed to:
 
 - [CogniPlant](https://github.com/DEADEND-47/CogniPlant) — Contributed to the backend and AI systems, including RAG, NLP pipelines, knowledge graphs, and compliance workflows.
 
+- [FactFinder](https://github.com/DEADEND-47/ClaimAI) — 
+
 More contributions will be added as I continue contributing to open-source projects.
 
 ---
