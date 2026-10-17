@@ -14,7 +14,7 @@ Here are some repositories I’ve contributed to:
 
 - [CogniPlant](https://github.com/DEADEND-47/CogniPlant) — Contributed to the backend and AI systems, including RAG, NLP pipelines, knowledge graphs, and compliance workflows.
 
-- [FactFinder](https://github.com/DEADEND-47/FactFinder) — Contributed to AI development and integration, working on intelligent search, AI-powered analysis, natural language processing, and relevant response generation for fact verification.
+- [FactFinder](https://github.com/anuragkumar80/FactFinder) — Contributed to AI development and integration, working on intelligent search, AI-powered analysis, natural language processing, and relevant response generation for fact verification.
 
 More contributions will be added as I continue contributing to open-source projects.
 
