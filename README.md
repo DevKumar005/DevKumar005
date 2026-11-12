@@ -16,7 +16,9 @@ Here are some repositories I’ve contributed to:
 
 - [FactFinder](https://github.com/anuragkumar80/FactFinder) — Contributed to AI development and integration, working on intelligent search, AI-powered analysis, natural language processing, and relevant response generation for fact verification.
 
-- [SeeGuide](https://github.com/DEADEND-47/SeeGuide) - 
+- [SeeGuide](https://github.com/DEADEND-47/SeeGuide) -
+
+- [GuardPay](https://github.com/Rohit-pal01/GuardPay) - 
 
 More contributions will be added as I continue contributing to open-source projects.
 
