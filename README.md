@@ -18,7 +18,7 @@ Here are some repositories I’ve contributed to:
 
 - [SeeGuide](https://github.com/DEADEND-47/SeeGuide) -
 
-- [GuardPay](https://github.com/Rohit-pal01/GuardPay) - 
+- [GuardPay](https://github.com/Rohit-pal01/GuardPay) - Led overall project architecture and technical integration, developed the frontend and interactive shopping workspace, including live audit timelines and approval modals, and handled API client integration, deployment configuration, and demo flow.
 
 More contributions will be added as I continue contributing to open-source projects.
 
